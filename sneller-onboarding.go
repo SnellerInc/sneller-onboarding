@@ -90,13 +90,13 @@ func main() {
 	iamClient = iam.NewFromConfig(cfg)
 	s3Client = s3.NewFromConfig(cfg)
 
-	err = createSandbox(ctx)
+	err = performOnboarding(ctx)
 	if err != nil {
-		golog.Fatalf("Failed to create sandbox: %v", err)
+		golog.Fatalf("Failed to perform onboarding: %v", err)
 	}
 }
 
-func createSandbox(ctx context.Context) (err error) {
+func performOnboarding(ctx context.Context) (err error) {
 
 	if log2json {
 		fmt.Print("{") // print opening brace
@@ -607,7 +607,7 @@ func initiateSyncForTable(tenant TenantInfo, pattern string) (err error) {
 func getEndpoint() string {
 	// Check for sneller's production account
 	if SnellerAwsAccountId == "701831592002" {
-		return "https://latest-snellerd-staging.us-east-1.sneller.io"
+		return "https://snellerd-production.us-east-1.sneller.io"
 	}
 	return "https://latest-snellerd-master.us-east-1.sneller-dev.io"
 }
