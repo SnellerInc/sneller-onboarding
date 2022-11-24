@@ -120,7 +120,7 @@ func performOnboarding(ctx context.Context) (err error) {
 
 	// TODO: Check if we can skip setting up the Sneller bucket (invoke checkTenantForBucketConfig(tenant))
 
-	snellerBucket := "sneller-" + strings.ToLower(tenant.TenantID)
+	snellerBucket := "sneller-" + strings.ToLower(tenant.TenantID) + "-" + Uid[:4]
 
 	// Configure the policy and associated role for required S3 access to Sneller bucket
 	roleName, err := setupSnellerBucket(ctx, snellerBucket, SnellerAwsAccountId, tenant)
@@ -580,6 +580,10 @@ func setupEventNotifications(ctx context.Context, bucketName, bucketPrefix, sqsQ
 	}
 
 	_, err = s3Client.PutBucketNotificationConfiguration(ctx, &in)
+	if err != nil {
+		// Output hint as to whether the user actually owns the bucket
+		log("Error while configuring bucket notifications", fmt.Sprintf("Do you **own** the bucket: '%s' ?", bucketName))
+	}
 	return // pass on any errors as is
 }
 
