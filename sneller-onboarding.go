@@ -112,20 +112,33 @@ func performOnboarding(ctx context.Context) (err error) {
 	if newTenant != nil {
 		// Create tenant and access token for tenant
 		if tenant, err = createTenant(newTenant); err != nil {
-			return err
+			return
 		}
 	} else {
 		tenant = *tenantPtr
 	}
 
-	// TODO: Check if we can skip setting up the Sneller bucket (invoke checkTenantForBucketConfig(tenant))
+	var roleName string
 
-	snellerBucket := "sneller-" + strings.ToLower(tenant.TenantID) + "-" + Uid[:4]
+	// Check if region is already configured (ie has Sneller bucket)
+	var tri tenantRegionInfo
+	var configured bool
+	if tri, configured, err = checkTenantForBucketConfig(tenant, Region); err != nil || !configured {
 
-	// Configure the policy and associated role for required S3 access to Sneller bucket
-	roleName, err := setupSnellerBucket(ctx, snellerBucket, SnellerAwsAccountId, tenant)
-	if err != nil {
-		return
+		// Create unique name for Sneller bucket
+		snellerBucket := "sneller-" + strings.ToLower(tenant.TenantID) + "-" + Uid[:4]
+
+		// Configure the policy and associated role for required S3 access to Sneller bucket
+		if roleName, err = setupSnellerBucket(ctx, snellerBucket, SnellerAwsAccountId, tenant); err != nil {
+			return
+		}
+	} else {
+		parts := strings.Split(tri.RegionRoleArn, "/")
+		if len(parts) != 2 {
+			err = errors.New(fmt.Sprintf("Expected single '/' in rolename, got %d parts in %s", len(parts), tri.RegionRoleArn))
+			return
+		}
+		roleName = parts[1]
 	}
 
 	// Configure a data source
@@ -292,15 +305,15 @@ func createTenant(newTenant *NewTenantInfo) (tenant TenantInfo, err error) {
 	return
 }
 
-func checkTenantForBucketConfig(tenant TenantInfo) {
+type tenantRegionInfo struct {
+	Bucket           string
+	RegionRoleArn    string
+	RegionExternalID string
+}
+
+func checkTenantForBucketConfig(tenant TenantInfo, region string) (tri tenantRegionInfo, configured bool, err error) {
 
 	type MfaRequirement string
-
-	type tenantRegionInfo struct {
-		Bucket           string
-		RegionRoleArn    string
-		RegionExternalID string
-	}
 
 	type tenantInfo struct {
 		TenantID      string
@@ -318,16 +331,16 @@ func checkTenantForBucketConfig(tenant TenantInfo) {
 
 	values := url.Values{}
 	values.Set("regions", "all")
-	out, err := invokeSnellerApi("GET", "/tenant/"+tenant.TenantID, tenant.TokenSecret, values, nil)
-	if err != nil {
+	var out string
+	if out, err = invokeSnellerApi("GET", "/tenant/"+tenant.TenantID, tenant.TokenSecret, values, nil); err != nil {
 		return
 	}
 
 	var ti tenantInfo
-	err = json.Unmarshal([]byte(out), &ti)
-	if tri, ok := ti.Regions[Region]; ok {
-		log("tenantRegionInfo", fmt.Sprintf("%s", tri))
+	if err = json.Unmarshal([]byte(out), &ti); err != nil {
+		return
 	}
+	tri, configured = ti.Regions[region]
 	return
 }
 
