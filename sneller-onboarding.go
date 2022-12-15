@@ -241,8 +241,7 @@ func readEnvironmentVars() (config SnellerConfig, newTenant *NewTenantInfo, tena
 
 func invokeSnellerApi(method, api, token string, values url.Values, body io.Reader) (string, error) {
 
-	// TODO: Set API endpoint for production
-	snellerApiEndpoint := "https://latest-api-staging.us-east-1.sneller.io"
+	snellerApiEndpoint := "https://latest-api-production.us-east-1.sneller.io"
 
 	if SnellerAwsAccountId != "701831592002" {
 		snellerApiEndpoint = "https://" + "latest-api-master" + "." + Region + ".sneller-dev.io"
