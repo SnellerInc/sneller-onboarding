@@ -605,7 +605,7 @@ func initiateSyncForTable(tenant TenantInfo, pattern string) (err error) {
 	// Initiate sync for this table
 	values := url.Values{}
 	values.Set("pattern", pattern)
-	values.Set("limit", "10")
+	values.Set("limit", "1000")
 
 	// Allow for some time for IAM changes to propagate
 	time.Sleep(1500 * time.Millisecond)
